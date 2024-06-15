@@ -5,15 +5,15 @@
 # Copyright (c) Ben Word
 
 DEVDIR="web/app/uploads/"
-DEVSITE="https://trellis-test.test"
+DEVSITE="http://trellis-test.test"
 
-PRODDIR="web@164.92.172.66:/srv/www/trellis-test.local/shared/uploads/"
-PRODSITE="https://164.92.172.66"
+PRODDIR="web@trellis-test.local:/srv/www/trellis-test.local/shared/uploads/"
+PRODSITE="http://trellis-test.local"
 
 STAGDIR="web@staging.example.com:/srv/www/example.com/shared/uploads/"
 STAGSITE="https://staging.example.com"
 
-LOCAL=true
+LOCAL=false
 SKIP_DB=false
 SKIP_ASSETS=false
 POSITIONAL_ARGS=()
@@ -48,7 +48,7 @@ set -- "${POSITIONAL_ARGS[@]}"
 if [ $# != 2 ]
 then
   echo "Usage: $0 [[--skip-db] [--skip-assets] [--local]] [ENV_FROM] [ENV_TO]"
-exit;
+  exit;
 fi
 
 FROM=$1
@@ -103,6 +103,8 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     else
       AVAILFROM=$(wp "@$FROM" option get home 2>&1)
     fi
+    echo "Checking availability of $FROM"
+    echo "Response from $FROM: $AVAILFROM"
     if [[ $AVAILFROM == *"Error"* ]]; then
       echo "❌  Unable to connect to $FROM"
       exit 1
@@ -119,7 +121,8 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     else
       AVAILTO=$(wp "@$TO" option get home 2>&1)
     fi
-
+    echo "Checking availability of $TO"
+    echo "Response from $TO: $AVAILTO"
     if [[ $AVAILTO == *"Error"* ]]; then
       echo "❌  Unable to connect to $TO $AVAILTO"
       exit 1
@@ -131,7 +134,7 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
 
   if [ "$SKIP_DB" = false ]
   then
-  echo "Syncing database..."
+    echo "Syncing database..."
     # Export/import database, run search & replace
     if [[ "$LOCAL" = true && $TO == "development" ]]; then
       wp db export --default-character-set=utf8mb4 &&
@@ -153,7 +156,7 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
 
   if [ "$SKIP_ASSETS" = false ]
   then
-  echo "Syncing assets..."
+    echo "Syncing assets..."
     # Sync uploads directory
     chmod -R 755 web/app/uploads/ &&
     if [[ $DIR == "horizontally"* ]]; then
@@ -168,10 +171,5 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     fi
   fi
 
-  # Slack notification when sync direction is up or horizontal
-  # if [[ $DIR != "down"* ]]; then
-  #   USER="$(git config user.name)"
-  #   curl -X POST -H "Content-type: application/json" --data "{\"attachments\":[{\"fallback\": \"\",\"color\":\"#36a64f\",\"text\":\"🔄 Sync from ${FROMSITE} to ${TOSITE} by ${USER} complete \"}],\"channel\":\"#site\"}" https://hooks.slack.com/services/xx/xx/xx
-  # fi
   echo -e "\n🔄  Sync from $FROM to $TO complete.\n\n    ${bold}$TOSITE${normal}\n"
 fi

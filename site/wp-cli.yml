@@ -2,6 +2,3 @@ path: web/wp
 server:
   docroot: web
 
-@development:
-  ssh: vagrant@192.168.56.5/srv/www/trellis-test.test/current
-  path: /srv/www/exatrellis-test.test/current
