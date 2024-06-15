@@ -45,10 +45,9 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}"
 
-if [ $# != 2 ]
-then
+if [ $# != 2 ]; then
   echo "Usage: $0 [[--skip-db] [--skip-assets] [--local]] [ENV_FROM] [ENV_TO]"
-exit;
+  exit;
 fi
 
 FROM=$1
@@ -67,32 +66,29 @@ case "$1-$2" in
   *) echo "usage: $0 [[--skip-db] [--skip-assets] [--local]] production development | staging development | development staging | development production | staging production | production staging" && exit 1 ;;
 esac
 
-if [ "$SKIP_DB" = false ]
-then
+if [ "$SKIP_DB" = false ]; then
   DB_MESSAGE=" - ${bold}reset the $TO database${normal} ($TOSITE)"
 fi
 
-if [ "$SKIP_ASSETS" = false ]
-then
+if [ "$SKIP_ASSETS" = false ]; then
   ASSETS_MESSAGE=" - sync ${bold}$DIR${normal} from $FROM ($FROMSITE)?"
 fi
 
-if [ "$SKIP_DB" = true ] && [ "$SKIP_ASSETS" = true ]
-then
+if [ "$SKIP_DB" = true ] && [ "$SKIP_ASSETS" = true ]; then
   echo "Nothing to synchronize."
   exit;
 fi
 
 echo
 echo "Would you really like to "
-echo $DB_MESSAGE
-echo $ASSETS_MESSAGE
+echo "$DB_MESSAGE"
+echo "$ASSETS_MESSAGE"
 read -r -p " [y/N] " response
 
 if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
   # Change to site directory
-  cd ../ &&
-  echo
+  cd "$(dirname "$0")" || exit 1
+  echo "Current directory: $(pwd)"
 
   # Make sure both environments are available before we continue
   availfrom() {
@@ -103,13 +99,15 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     else
       AVAILFROM=$(wp "@$FROM" option get home 2>&1)
     fi
+    echo "Checking availability of $FROM"
+    echo "Response from $FROM: $AVAILFROM"
     if [[ $AVAILFROM == *"Error"* ]]; then
       echo "❌  Unable to connect to $FROM"
       exit 1
     else
       echo "✅  Able to connect to $FROM"
     fi
-  };
+  }
   availfrom
 
   availto() {
@@ -119,19 +117,19 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     else
       AVAILTO=$(wp "@$TO" option get home 2>&1)
     fi
-
+    echo "Checking availability of $TO"
+    echo "Response from $TO: $AVAILTO"
     if [[ $AVAILTO == *"Error"* ]]; then
       echo "❌  Unable to connect to $TO $AVAILTO"
       exit 1
     else
       echo "✅  Able to connect to $TO"
     fi
-  };
+  }
   availto
 
-  if [ "$SKIP_DB" = false ]
-  then
-  echo "Syncing database..."
+  if [ "$SKIP_DB" = false ]; then
+    echo "Syncing database..."
     # Export/import database, run search & replace
     if [[ "$LOCAL" = true && $TO == "development" ]]; then
       wp db export --default-character-set=utf8mb4 &&
@@ -151,9 +149,8 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     fi
   fi
 
-  if [ "$SKIP_ASSETS" = false ]
-  then
-  echo "Syncing assets..."
+  if [ "$SKIP_ASSETS" = false ]; then
+    echo "Syncing assets..."
     # Sync uploads directory
     chmod -R 755 web/app/uploads/ &&
     if [[ $DIR == "horizontally"* ]]; then
@@ -162,16 +159,11 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
       [[ $TODIR =~ ^(.*): ]] && TOHOST=${BASH_REMATCH[1]}
       [[ $TODIR =~ ^(.*):(.*)$ ]] && TODIR=${BASH_REMATCH[2]}
 
-      ssh -o ForwardAgent=yes $FROMHOST "rsync -aze 'ssh -o StrictHostKeyChecking=no' --progress $FROMDIR $TOHOST:$TODIR"
+      ssh -o ForwardAgent=yes "$FROMHOST" "rsync -aze 'ssh -o StrictHostKeyChecking=no' --progress $FROMDIR $TOHOST:$TODIR"
     else
       rsync -az --progress "$FROMDIR" "$TODIR"
     fi
   fi
 
-  # Slack notification when sync direction is up or horizontal
-  # if [[ $DIR != "down"* ]]; then
-  #   USER="$(git config user.name)"
-  #   curl -X POST -H "Content-type: application/json" --data "{\"attachments\":[{\"fallback\": \"\",\"color\":\"#36a64f\",\"text\":\"🔄 Sync from ${FROMSITE} to ${TOSITE} by ${USER} complete \"}],\"channel\":\"#site\"}" https://hooks.slack.com/services/xx/xx/xx
-  # fi
   echo -e "\n🔄  Sync from $FROM to $TO complete.\n\n    ${bold}$TOSITE${normal}\n"
 fi

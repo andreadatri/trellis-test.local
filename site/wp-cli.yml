@@ -1,3 +1,15 @@
 path: web/wp
 server:
   docroot: web
+
+@development:
+  ssh: vagrant@trellis-test.test:/srv/www/trellis-test.local/current
+  path: web/wp
+
+@staging:
+  ssh: web@staging.example.com:/srv/www/example.com/current
+  path: web/wp
+
+@production:
+  ssh: web@trellis-test.local:/srv/www/trellis-test.local/current
+  path: web/wp
