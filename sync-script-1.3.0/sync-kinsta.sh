@@ -1,17 +1,20 @@
 #!/bin/bash
 
-# Syncing Trellis & Bedrock-based WordPress environments with WP-CLI aliases
+# Syncing Trellis & Bedrock-based WordPress environments with WP-CLI aliases (Kinsta version)
 # Version 1.2.0
 # Copyright (c) Ben Word
 
 DEVDIR="web/app/uploads/"
-DEVSITE="http://trellis-test.test"
+DEVSITE="https://example.test"
+DEVPORT="22"
 
-PRODDIR="web@trellis-test.local:/srv/www/trellis-test.local/shared/uploads/"
-PRODSITE="http://trellis-test.local"
+REMOTEDIR="example@1.2.3.4:/www/example_123/public/shared/uploads/"
 
-STAGDIR="web@staging.example.com:/srv/www/example.com/shared/uploads/"
-STAGSITE="https://staging.example.com"
+PRODPORT="12345"
+PRODSITE="https://example.com"
+
+STAGPORT="54321"
+STAGSITE="https://staging-example.kinsta.cloud"
 
 LOCAL=false
 SKIP_DB=false
@@ -58,12 +61,12 @@ bold=$(tput bold)
 normal=$(tput sgr0)
 
 case "$1-$2" in
-  production-development) DIR="down ⬇️ "          FROMSITE=$PRODSITE; FROMDIR=$PRODDIR; TOSITE=$DEVSITE;  TODIR=$DEVDIR; ;;
-  staging-development)    DIR="down ⬇️ "          FROMSITE=$STAGSITE; FROMDIR=$STAGDIR; TOSITE=$DEVSITE;  TODIR=$DEVDIR; ;;
-  development-production) DIR="up ⬆️ "            FROMSITE=$DEVSITE;  FROMDIR=$DEVDIR;  TOSITE=$PRODSITE; TODIR=$PRODDIR; ;;
-  development-staging)    DIR="up ⬆️ "            FROMSITE=$DEVSITE;  FROMDIR=$DEVDIR;  TOSITE=$STAGSITE; TODIR=$STAGDIR; ;;
-  production-staging)     DIR="horizontally ↔️ ";  FROMSITE=$PRODSITE; FROMDIR=$PRODDIR; TOSITE=$STAGSITE; TODIR=$STAGDIR; ;;
-  staging-production)     DIR="horizontally ↔️ ";  FROMSITE=$STAGSITE; FROMDIR=$STAGDIR; TOSITE=$PRODSITE; TODIR=$PRODDIR; ;;
+  production-development) DIR="down ⬇️ "           FROMSITE=$PRODSITE; FROMDIR=$REMOTEDIR; FROMPORT=$PRODPORT; TOPORT=$DEVPORT; TOSITE=$DEVSITE;  TODIR=$DEVDIR; ;;
+  staging-development)    DIR="down ⬇️ "           FROMSITE=$STAGSITE; FROMDIR=$REMOTEDIR; FROMPORT=$STAGPORT; TOPORT=$DEVPORT; TOSITE=$DEVSITE;  TODIR=$DEVDIR; ;;
+  development-production) DIR="up ⬆️ "             FROMSITE=$DEVSITE;  FROMDIR=$DEVDIR;  FROMPORT=$DEVPORT; TOPORT=$PRODPORT; TOSITE=$PRODSITE; TODIR=$REMOTEDIR; ;;
+  development-staging)    DIR="up ⬆️ "             FROMSITE=$DEVSITE;  FROMDIR=$DEVDIR;  FROMPORT=$DEVPORT; TOPORT=$STAGPORT; TOSITE=$STAGSITE; TODIR=$REMOTEDIR; ;;
+  production-staging)     DIR="horizontally ↔️ ";  FROMSITE=$PRODSITE; FROMDIR=$REMOTEDIR; FROMPORT=$PRODPORT; TOPORT=$STAGPORT; TOSITE=$STAGSITE; TODIR=$REMOTEDIR; ;;
+  staging-production)     DIR="horizontally ↔️ ";  FROMSITE=$STAGSITE; FROMDIR=$REMOTEDIR; FROMPORT=$STAGPORT; TOPORT=$PRODPORT; TOSITE=$PRODSITE; TODIR=$REMOTEDIR; ;;
   *) echo "usage: $0 [[--skip-db] [--skip-assets] [--local]] production development | staging development | development staging | development production | staging production | production staging" && exit 1 ;;
 esac
 
@@ -162,9 +165,11 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
       [[ $TODIR =~ ^(.*): ]] && TOHOST=${BASH_REMATCH[1]}
       [[ $TODIR =~ ^(.*):(.*)$ ]] && TODIR=${BASH_REMATCH[2]}
 
-      ssh -o ForwardAgent=yes $FROMHOST "rsync -aze 'ssh -o StrictHostKeyChecking=no' --progress $FROMDIR $TOHOST:$TODIR"
+      ssh -p $FROMPORT -o ForwardAgent=yes $FROMHOST "rsync -aze 'ssh -o StrictHostKeyChecking=no -p $TOPORT' --progress $FROMDIR $TOHOST:$TODIR"
+    elif [[ $DIR == "down"* ]]; then
+      rsync -chavzP -e "ssh -p $FROMPORT" --progress "$FROMDIR" "$TODIR"
     else
-      rsync -az --progress "$FROMDIR" "$TODIR"
+      rsync -az -e "ssh -p $TOPORT" --progress "$FROMDIR" "$TODIR"
     fi
   fi
 

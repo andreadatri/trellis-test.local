@@ -5,10 +5,10 @@
 # Copyright (c) Ben Word
 
 DEVDIR="web/app/uploads/"
-DEVSITE="http://trellis-test.test"
+DEVSITE="https://example.test"
 
-PRODDIR="web@trellis-test.local:/srv/www/trellis-test.local/shared/uploads/"
-PRODSITE="http://trellis-test.local"
+PRODDIR="web@example.com:/srv/www/example.com/shared/uploads/"
+PRODSITE="https://example.com"
 
 STAGDIR="web@staging.example.com:/srv/www/example.com/shared/uploads/"
 STAGSITE="https://staging.example.com"
