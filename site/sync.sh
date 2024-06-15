@@ -16,7 +16,6 @@ STAGSITE="https://staging.example.com"
 LOCAL=false
 SKIP_DB=false
 SKIP_ASSETS=false
-SKIP_USER=false
 POSITIONAL_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -27,10 +26,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-assets)
       SKIP_ASSETS=true
-      shift
-      ;;
-    --skip-user)
-      SKIP_USER=true
       shift
       ;;
     --local)
@@ -51,7 +46,7 @@ done
 set -- "${POSITIONAL_ARGS[@]}"
 
 if [ $# != 2 ]; then
-  echo "Usage: $0 [[--skip-db] [--skip-assets] [--skip-user] [--local]] [ENV_FROM] [ENV_TO]"
+  echo "Usage: $0 [[--skip-db] [--skip-assets] [--local]] [ENV_FROM] [ENV_TO]"
   exit;
 fi
 
@@ -68,7 +63,7 @@ case "$1-$2" in
   development-staging)    DIR="up ⬆️ "            FROMSITE=$DEVSITE;  FROMDIR=$DEVDIR;  TOSITE=$STAGSITE; TODIR=$STAGDIR; ;;
   production-staging)     DIR="horizontally ↔️ ";  FROMSITE=$PRODSITE; FROMDIR=$PRODDIR; TOSITE=$STAGSITE; TODIR=$STAGDIR; ;;
   staging-production)     DIR="horizontally ↔️ ";  FROMSITE=$STAGSITE; FROMDIR=$STAGDIR; TOSITE=$PRODSITE; TODIR=$PRODDIR; ;;
-  *) echo "usage: $0 [[--skip-db] [--skip-assets] [--skip-user] [--local]] production development | staging development | development staging | development production | staging production | production staging" && exit 1 ;;
+  *) echo "usage: $0 [[--skip-db] [--skip-assets] [--local]] production development | staging development | development staging | development production | staging production | production staging" && exit 1 ;;
 esac
 
 if [ "$SKIP_DB" = false ]; then
@@ -151,11 +146,6 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
       wp "@$TO" db reset --yes &&
       wp "@$FROM" db export --default-character-set=utf8mb4 - | wp "@$TO" db import - &&
       wp "@$TO" search-replace "$FROMSITE" "$TOSITE" --all-tables-with-prefix
-    fi
-
-    if [ "$SKIP_USER" = false ]; then
-      echo "Removing all users from $TO environment..."
-      wp user delete $(wp user list --field=ID)
     fi
   fi
 
