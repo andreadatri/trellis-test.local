@@ -5,8 +5,6 @@ wordpress_sites:
   trellis-test.local:
     site_hosts:
     - canonical: trellis-test.xyz
-      redirects:
-      - www.trellis-test.xyz
     local_path: ../site
     branch: main
     repo: git@github.com:andreadatri/trellis-test.local.git
